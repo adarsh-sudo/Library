@@ -68,13 +68,12 @@ public class LibraryServiceImplementation implements LibraryService{
 
 	@Override
 	public BookDTO addBook(BookDTO bookDTO) throws LibraryException
-	{
-		List<Book> books = bookRepository.getBookDetails(bookDTO.getBookName(), bookDTO.getAuthor());
+{
+		Book books = bookRepository.getBookDetails(bookDTO.getBookName(), bookDTO.getAuthor());
 		
 		Book book = new Book();
-		if(Boolean.FALSE.equals(books.isEmpty()))
-		{
-			book = books.get(0);
+		if (books != null) {
+			book = books;
 			book.setQuantity(book.getQuantity()+bookDTO.getQuantity());
 			book.setRemQuantity(book.getRemQuantity()+bookDTO.getQuantity());
 			bookDTO.setRemQuantity(book.getRemQuantity());
@@ -87,7 +86,7 @@ public class LibraryServiceImplementation implements LibraryService{
 		
 			book = new BookDTO().prepareEntity(bookDTO);
 			book.setRemQuantity(bookDTO.getQuantity());
-			bookRepository.save(book);
+			//bookRepository.save(book);
 			Integer id = bookRepository.save(book).getBookId();
 			bookDTO.setRemQuantity(book.getRemQuantity());
 			bookDTO.setBookId(id);
@@ -107,23 +106,68 @@ public class LibraryServiceImplementation implements LibraryService{
 		
 	
 		
-		Optional<Student> studentOptional = studentRepository.findById(studentDTO.getIdCardNumber());
+			
+        Optional<Student> studentOptional = studentRepository.findById(studentDTO.getIdCardNumber());
+
+        
+        
         if (studentOptional.isPresent()) {
+        
             Student student = studentOptional.get();
             List<Book> booksToAdd = (List<Book>) bookRepository.findAllById(studentDTO.getBookIds());
-            student.getBooks().addAll(booksToAdd);
+            List<Integer> integers = new ArrayList<>();
+            
+            booksToAdd.stream()
+                .filter(book -> book.getRemQuantity() > 0)
+                .forEach(book -> {
+                    student.getBooks().add(book);
+                    book.setRemQuantity(book.getRemQuantity() - 1);
+                    integers.add(book.getBookId());
+                });
+
+            // Save the student
             studentRepository.save(student);
-        } 
-        
-        else {
-        	Student student = new Student();
-        	student = new StudentDTO().prepareEntity(studentDTO);
+            
+            
+            // Save all updated books
+            bookRepository.saveAll(booksToAdd);
+            
+            StudentDTO studentDTO2 = new StudentDTO().prepareDTO(student);
+            studentDTO2.setBookIds(integers);
+            
+            return studentDTO2;
+
+        } else {
+        	
+            Student student = new StudentDTO().prepareEntity(studentDTO);
             List<Book> booksToAdd = (List<Book>) bookRepository.findAllById(studentDTO.getBookIds());
-            student.getBooks().addAll(booksToAdd);
+            List<Integer> integers = new ArrayList<>();
+
+            booksToAdd.stream()
+                .filter(book -> book.getRemQuantity() > 0)
+                .forEach(book -> {
+                    student.getBooks().add(book);
+                    book.setRemQuantity(book.getRemQuantity() - 1);
+                    integers.add(book.getBookId());
+                });
+            
+            
+
+            // Save the student
             studentRepository.save(student);
+            
+            // Save all updated books
+            bookRepository.saveAll(booksToAdd);
+            
+            StudentDTO studentDTO2 = new StudentDTO().prepareDTO(student);
+            studentDTO2.setBookIds(integers);
+           
+            
+            return studentDTO2;
         }
+        
 		
-		return studentDTO;
+		
 	}
 	
 	
